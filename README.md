@@ -1,8 +1,8 @@
 # krakenctl
 Change the display on your Z73 Kraken from linux
 
-## Disclaimer
-This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
+### Disclaimer
+This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
 
 
 ### How to use
@@ -12,10 +12,20 @@ $ krakenctl [OPTIONS]
 | :---        | :---        | 
 | -b          | shows blank screen      | 
 | -l          | shows liquid temperature   | 
-| -c VAL      | shows value where VAL is a comma separated string of values between 0-100 e.g.:   |
-|             | krakenctl -c 55
-|             | krakenctl -c 33,45
-| -s TXT      | shows subtitle where TXT is a comma separated string of 3 characters e.g.: |
-|             |  krakenctl -s CPU |
-|             |  krakenctl -s CPU,GPU |
-| -r VAL      | sets brightness between 0-100 e.g. krakenctl -r 60 |
+| -v Valuestring      | shows value(s) and or subtitles (see below for examples)    |
+| -r brightness      | sets brightness between 0-100 e.g. krakenctl -r 60 |
+
+### Valuestring
+Made up of 2 parts, separated by a semicolon:
+- value(s)
+- subtitle(s)
+In addition, each of these can be optionally separated by a comma to display 2 values.
+Remember if using a semicolon, you may need to use quotes to surround the Valuestring
+Examples:
+
+| Desc | value |
+| :--- | :--- |
+| 1 amount only | 45° |
+| 2 amounts | 45°,34° |
+| 1 amount with subtitle | "45°;CPU" |
+| 2 amounts with subtitles | "33°,45°;CPU,GPU" |
