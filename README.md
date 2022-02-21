@@ -30,6 +30,18 @@ Examples:
 | 1 amount with subtitle | "45°;CPU" |
 | 2 amounts with subtitles | "33°,45°;CPU,GPU" |
 
+It is recommended if using 2 amounts, to keep the amounts short, only use 2 digits and a degree symbol.
+Also, amounts without decimals is preferred.
+
+### Roadmap
+- [x] blank screen
+- [x] liquid
+- [x] values with subtitles
+- [x] linux support
+- [ ] windows support
+- [ ] custom image
+- [ ] custom animation
+
 ### Contribute
 If you find this application useful, or would like to make a contribution for continued development, you can buy me a coffee.
 <a href="https://www.buymeacoffee.com/griccardos" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
