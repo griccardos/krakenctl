@@ -2,9 +2,9 @@
 Change the display on your Z73 Kraken
 
 Krakenctl is an application written in rust, that allows users to change the display on their Z73 Kraken device.
-Currently the manufacturer only provides the software for Windows that has the ability to show CPU/GPU, images etc.
-Setting to liquid, or animation in Windows and then booting in linux works, however if you need to show CPU temps in linux, this is not currently possible.
-This app allows you to update the display with what ever values you please (normally cpu temps).
+Currently the manufacturer only provides the software for Windows users to change their display and show CPU/GPU, images etc.
+
+This app allows linux users to update the display with whatever values they please (for example cpu and gpu temps).
 
 ### Disclaimer
 This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
