@@ -9,8 +9,12 @@ This app allows you to update the display with what ever values you please (norm
 ### Disclaimer
 This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
 
+
 ![image](https://user-images.githubusercontent.com/30464685/155272710-dbc8b52f-0cbb-4b3f-98c2-e2b399097007.png)
 ![image](https://user-images.githubusercontent.com/30464685/155272858-e27a95bf-4633-4378-b6e0-8d0670fec49c.png)
+
+### How to get
+Go to releases section, and download executable from there
 
 
 ### How to use
