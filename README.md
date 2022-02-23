@@ -1,5 +1,5 @@
 # krakenctl
-Change the display on your Z73 Kraken
+Change the display on your NZXT Z73 Kraken AIO cooler in linux
 
 Krakenctl is an application written in rust, that allows users to change the display on their Z73 Kraken device.
 Currently the manufacturer only provides the software for Windows users to change their display and show CPU/GPU, images etc.
