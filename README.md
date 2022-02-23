@@ -19,6 +19,14 @@ $ krakenctl [OPTIONS]
 | -v Valuestring      | shows value(s) and or subtitles (see below for examples)    |
 | -r brightness      | sets brightness between 0-100 e.g. krakenctl -r 60 |
 
+To continually update values with -v option you can use a script to loop and update every few seconds.
+For example if cputemp.sh is the script that returns the temperature, and you want updates every 1 second you'd use:
+$ while true; do; krakenctl -v $(cputemp.sh); sleep 1; done;
+
+or with gpu and subtitles:
+$ while true; do krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
+
+
 ### Valuestring
 Made up of 2 parts, separated by a semicolon:
 - value(s)
@@ -34,21 +42,13 @@ Examples:
 | 1 amount with subtitle | "45°;CPU" |
 | 2 amounts with subtitles | "33°,45°;CPU,GPU" |
 
-It is recommended if using 2 amounts, to keep the amounts short, only use 2 digits and a degree symbol.
+It is recommended if using 2 amounts, to keep the amounts short, only use 2 digits and degree symbol.
 Also, amounts without decimals is preferred.
 
-### Linux continuous update
-Current best way is to loop a script that updates every few seconds and sends values to krakenctl.
-For example if cputemp.sh is the script that returns the temperature, and you want updates every 1 second you'd use:
-$ while true; do; krakenctl -v $(cputemp.sh); sleep 1; done;
-or with gpu
-$ while true; do; krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
-
 ### Current flaws
-When using krakenctl in linux, when booting into windows, the USB device cannot be found. If you only use linux, probably not a problem, but if you dual boot, you can try the following ways to get it working on windows again. If anybody has any knowledge of why this happens, let me know.
+When using krakenctl in linux, when booting into windows, the kraken USB device cannot be found, and thus cannot be used with the software that comes with the device. If you only use linux, probably not a problem, but if you dual boot, you can try the following ways to get it working on windows again. If anybody has any knowledge of why this happens, let me know.
 - with computer off, remove the usb cable from the Kraken and wait a few seconds and replace
-- turn off computer, AND remove plug, wait for 30 seconds (depends on motherboard), and replace
-
+- turn off computer, COMPLETELY remove power cable, wait for 30 seconds (depends on motherboard), and replace
 
 ### Technical
 krakenctl is written in rust, and uses the rusb crate which in turn uses libusb library.
@@ -58,10 +58,17 @@ krakenctl is written in rust, and uses the rusb crate which in turn uses libusb 
 - [x] liquid
 - [x] values with subtitles
 - [x] linux support
+- [ ] custom colours
 - [ ] windows support
 - [ ] custom image
 - [ ] custom animation
-- [ ] getting USB not to lock in windows
+- [ ] getting USB to not lockup if boot to windows
+
+### Tested
+| OS | Version | Status |
+| :--- | :--- | :--- |
+| Linux | Arch | :heavy_check_mark: |
+| Windows | 10 | ❎ |
 
 ### Contribute
 If you find this application useful, or would like to make a contribution for continued development, you can buy me a coffee.
