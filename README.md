@@ -25,9 +25,11 @@ $ krakenctl [OPTIONS]
 
 To continually update values with -v option you can use a script to loop and update every few seconds.
 For example if cputemp.sh is the script that returns the temperature, and you want updates every 1 second you'd use:
-$ while true; do; krakenctl -v $(cputemp.sh); sleep 1; done;
+
+$ while true; do krakenctl -v $(cputemp.sh); sleep 1; done;
 
 or with gpu and subtitles:
+
 $ while true; do krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
 
 
