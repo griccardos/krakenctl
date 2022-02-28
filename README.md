@@ -59,6 +59,10 @@ Examples:
 It is recommended if using 2 amounts, to keep the amounts short, only use 2 digits and degree symbol.
 Also, amounts without decimals is preferred.
 
+### Config
+To configure, you can optionally create a config file in ~/.config/krakenctl/config.ini
+Download example config file above.
+
 ### Current flaws
 When using krakenctl in linux, when booting into windows, the kraken USB device cannot be found, and thus cannot be used with the software that comes with the device. If you only use linux, probably not a problem, but if you dual boot, you can try the following ways to get it working on windows again. If anybody has any knowledge of why this happens, let me know.
 - with computer off, remove the usb cable from the Kraken and wait a few seconds and replace
@@ -72,7 +76,7 @@ krakenctl is written in rust, and uses the rusb crate which in turn uses libusb 
 - [x] liquid
 - [x] values with subtitles
 - [x] linux support
-- [ ] custom colours
+- [x] custom colours
 - [ ] windows support
 - [ ] custom image
 - [ ] custom animation
