@@ -10,8 +10,7 @@ This app allows linux users to update the display with whatever values they plea
 This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
 
 
-![image](https://user-images.githubusercontent.com/30464685/155272710-dbc8b52f-0cbb-4b3f-98c2-e2b399097007.png)
-![image](https://user-images.githubusercontent.com/30464685/155272858-e27a95bf-4633-4378-b6e0-8d0670fec49c.png)
+![test](https://user-images.githubusercontent.com/30464685/156002243-7ca9cad3-68d5-47b7-95f1-5677583171f7.png)
 
 ### How to get
 Go to releases section, and download executable from there
@@ -45,6 +44,7 @@ $ while true; do krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
 Made up of 2 parts, separated by a semicolon:
 - value(s)
 - subtitle(s)
+
 In addition, each of these can be optionally separated by a comma to display 2 values.
 Remember if using a semicolon, you may need to use quotes to surround the Valuestring
 Examples:
