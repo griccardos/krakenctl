@@ -61,6 +61,7 @@ Also, amounts without decimals is preferred.
 
 ### Config
 To configure, you can optionally create a config file in ~/.config/krakenctl/config.ini
+
 Download example config file above.
 
 ### Current flaws
