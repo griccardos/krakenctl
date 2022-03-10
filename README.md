@@ -26,6 +26,7 @@ $ krakenctl [OPTIONS]
 | -l          | shows liquid temperature   | 
 | -v Valuestring      | shows value(s) and or subtitles (see below for examples)    |
 | -r brightness      | sets brightness between 0-100 e.g. krakenctl -r 60 |
+| --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. By default runs every 1 second | 
 
 To show liquid
 
@@ -34,11 +35,11 @@ $ krakenctl -l
 To continually update values with -v option you can use a script to loop and update every few seconds.
 For example if cputemp.sh is the script that returns the temperature, and you want updates every 1 second you'd use:
 
-$ while true; do krakenctl -v $(cputemp.sh); sleep 1; done;
-
-or with gpu and subtitles:
-
 $ while true; do krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
+
+or with script option
+
+$ krakenctl --script cpu-and-gpu-temp.sh
 
 
 ### Valuestring
