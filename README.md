@@ -10,8 +10,8 @@ This app allows linux users to update the display with whatever values they plea
 This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
 
 
-![test](https://user-images.githubusercontent.com/30464685/156002243-7ca9cad3-68d5-47b7-95f1-5677583171f7.png)
-![test](https://user-images.githubusercontent.com/30464685/157741632-5056f19a-443a-4592-bd47-fcc840812a6f.png)
+![test](pic1.png)
+![test](pic2.png)
 
 ### How to get
 Go to releases section, and download executable from there
