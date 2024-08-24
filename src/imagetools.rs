@@ -1,20 +1,20 @@
+use ab_glyph::{Font, FontRef, Glyph, GlyphId};
 use chrono::{Local, Timelike};
 use std::f32::consts::PI;
 use unicode_segmentation::UnicodeSegmentation;
 
-use image::{io::Reader, DynamicImage, Rgba};
+use image::{DynamicImage, ImageReader, Rgba};
 use imageproc::{
-    drawing::{draw_filled_circle_mut, draw_polygon_mut, draw_text_mut, Canvas},
+    drawing::{draw_filled_circle_mut, draw_polygon_mut, draw_text_mut},
     point::Point,
 };
-use rusttype::{point, Font, Scale};
 
 use crate::{input::Input, settings::Settings};
 
 static FONT_DATA: &[u8] = include_bytes!("../Tuffy_Bold.ttf");
 
 pub fn convert_image_from_path(path: &str) -> DynamicImage {
-    let img = Reader::open(path).unwrap().decode().unwrap();
+    let img = ImageReader::open(path).unwrap().decode().unwrap();
 
     //scale and flip
     let scale = f32::max(320.0 / img.width() as f32, 320.0 / img.height() as f32);
@@ -96,7 +96,7 @@ pub fn image_from_input(input: Input, settings: &Settings) -> Vec<u8> {
     let image = image.fliph();
     let image = image.flipv();
     //image.save("/tmp/test.png").unwrap();
-    image.to_bytes()
+    image.into_bytes()
 }
 
 fn draw_bars(
@@ -197,24 +197,24 @@ fn draw_bars(
 }
 
 fn draw_time(image: &mut DynamicImage, col: Rgba<u8>) {
-    let font = Font::try_from_bytes(FONT_DATA as &[u8]).expect("Error constructing Font");
+    let font = FontRef::try_from_slice(FONT_DATA).expect("Error constructing Font");
 
-    let scale = Scale::uniform(40.0);
+    let scale = 40.0;
     let ch = Local::now();
     let val = format!("{}:{:0>2}", ch.time().hour(), ch.time().minute());
-    let x = 160 - get_width(&val, &font, scale) / 2;
+    let x: i32 = 160 - get_width(&val, &font, scale) as i32 / 2;
     draw_text_mut(image, col, x, 45, scale, &font, &val);
 }
 fn draw_value(image: &mut DynamicImage, vals: &[&str], left_col: Rgba<u8>, right_col: Rgba<u8>) {
-    let font = Font::try_from_bytes(FONT_DATA as &[u8]).expect("Error constructing Font");
+    let font = FontRef::try_from_slice(FONT_DATA).expect("Error constructing Font");
 
     if vals.len() == 1 {
-        let scale = Scale::uniform(80.0);
+        let scale = 80.0;
         let val = truncate(vals[0], 6); //max 6
-        let x = 160 - get_width(&val, &font, scale) / 2;
+        let x: i32 = 160 - get_width(&val, &font, scale) / 2;
         draw_text_mut(image, left_col, x, 110, scale, &font, &val);
     } else if vals.len() >= 2 {
-        let scale = Scale::uniform(60.0);
+        let scale = 60.0;
         let val0 = truncate(vals[0], 4); //max 6
         let val1 = truncate(vals[1], 4);
         let x0 = 105 - get_width(&val0, &font, scale) / 2;
@@ -225,15 +225,15 @@ fn draw_value(image: &mut DynamicImage, vals: &[&str], left_col: Rgba<u8>, right
 }
 
 fn draw_title(image: &mut DynamicImage, vals: &[&str], left_col: Rgba<u8>, right_col: Rgba<u8>) {
-    let font = Font::try_from_bytes(FONT_DATA as &[u8]).expect("Error constructing Font");
+    let font = FontRef::try_from_slice(FONT_DATA).expect("Error constructing Font");
 
     if vals.len() == 1 {
-        let scale = Scale::uniform(40.0);
+        let scale = 40.0;
         let val = truncate(vals[0], 6); //max 6
         let x = 160 - get_width(&val, &font, scale) / 2;
         draw_text_mut(image, left_col, x, 190, scale, &font, &val);
     } else if vals.len() >= 2 {
-        let scale = Scale::uniform(40.0);
+        let scale = 40.0;
         let val0 = truncate(vals[0], 4); //max 6
         let val1 = truncate(vals[1], 4);
         let x0 = 105 - get_width(&val0, &font, scale) / 2;
@@ -251,13 +251,14 @@ fn truncate(string: &str, len: usize) -> String {
     string.to_owned()
 }
 
-fn get_width(string: &str, font: &Font, scale: Scale) -> u32 {
+fn get_width(string: &str, font: &impl Font, scale: f32) -> i32 {
     //calc size of 1 char
-    let glyphs: Vec<_> = font.layout("8", scale, point(0.0, 0.0)).collect();
+    let g = GlyphId('A' as u16);
+    let a = font.glyph_bounds(&Glyph {
+        id: g,
+        scale: scale.into(),
+        position: (0.0, 0.0).into(),
+    });
 
-    let max_x = glyphs
-        .last()
-        .map(|g| g.pixel_bounding_box().unwrap_or_default().max.x)
-        .unwrap();
-    max_x as u32 * string.graphemes(true).count() as u32
+    a.width() as i32 * string.graphemes(true).count() as i32
 }

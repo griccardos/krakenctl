@@ -142,11 +142,6 @@ impl Manager {
     pub fn set_image_with_bytes(&mut self, img_bytes: &[u8], is_gif: bool) {
         let device_handle = self.get_handle();
         if self.image_index.is_none() {
-            //setup image writing
-            // self.write_to_interrupt(buff![0x10,1;64]);
-            // self.write_to_interrupt(buff![0x36,3;64]);
-            // self.write_to_interrupt(buff![0x30,1;64]);
-
             //clear images
             for i in 0..16 {
                 self.write_to_interrupt(&device_handle, buff![0x30,4,i;64]);
@@ -362,7 +357,7 @@ Firmware {}.{}.{}",
         if let Err(e) = res {
             println!("error writing to kraken {:?}", e);
         }
-
+        std::thread::sleep(Duration::from_millis(200));
         let mut buf = [0u8; 64];
         let res = device_handle.read_interrupt(129, &mut buf, Duration::from_millis(500));
         if let Err(e) = res {

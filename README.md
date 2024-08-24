@@ -7,26 +7,34 @@ Currently the manufacturer only provides the software for Windows users to chang
 This app allows linux users to update the display with whatever values they please (for example cpu and gpu temps).
 
 ### Disclaimer
-This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on. 
+This is alpha software, and may damage your device. Your cooler may stop functioning, be damaged, bricked, or stop working, which may in turn affect your other devices, most notably your CPU! Use this at your own risk. We take no responsibility for any damage to any of your devices or systems you run this on.
 
 
 ![test](pic1.png)
 ![test](pic2.png)
 
 ### How to get
-Go to releases section, and download executable from there
+Go to releases section, and download executable from there.
+Or install rustup, and clone this repo, and run `cargo build --release` to build the executable.
+
+You need to run as root, or you need to give your user permissions to access the USB device.
+To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` and insert the following line:
+
+`SUBSYSTEM=="usb", ATTRS{idVendor}=="1e71", ATTRS{idProduct}=="3008", GROUP="plugdev", TAG+="uaccess"`
+
+Then run `reboot`
 
 
 ### How to use
 $ krakenctl [OPTIONS]
 
-| Option      | Description | 
-| :---        | :---        | 
-| -b          | shows blank screen      | 
-| -l          | shows liquid temperature   | 
+| Option      | Description |
+| :---        | :---        |
+| -b          | shows blank screen      |
+| -l          | shows liquid temperature   |
 | -v Valuestring      | shows value(s) and or subtitles (see below for examples)    |
 | -r brightness      | sets brightness between 0-100 e.g. krakenctl -r 60 |
-| --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. By default runs every 1 second | 
+| --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. By default runs every 1 second |
 
 To show liquid
 
@@ -88,7 +96,7 @@ krakenctl is written in rust, and uses the rusb crate which in turn uses libusb 
 ### Tested
 | OS | Version | Status |
 | :--- | :--- | :--- |
-| Linux | Arch | :heavy_check_mark: |
+| Linux | Arch | yes  |
 | Windows | 10 | ❎ |
 
 ### Contribute

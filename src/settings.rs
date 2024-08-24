@@ -4,6 +4,7 @@ use std::{
     io::{BufReader, Read},
 };
 
+#[derive(Debug)]
 pub struct Settings {
     pub time: Rgba<u8>,
     pub left_bar: Rgba<u8>,
@@ -86,7 +87,13 @@ fn string_to_rgba(string: &str) -> Rgba<u8> {
         return default_colour;
     }
     let mut vec = vec![];
-    for item in string.chars().skip(1).take(6).collect::<Vec<char>>().chunks(2) {
+    for item in string
+        .chars()
+        .skip(1)
+        .take(6)
+        .collect::<Vec<char>>()
+        .chunks(2)
+    {
         let val = u8::from_str_radix(format!("{}{}", item[0], item[1]).as_str(), 16);
         if let Ok(val) = val {
             vec.push(val);
