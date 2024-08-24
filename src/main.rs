@@ -4,12 +4,13 @@
 //mod api;
 mod imagetools;
 mod input;
-mod managerlibusb;
+//mod managerlibusb;
 //mod managerusbxpress;
+mod managerrusb;
 mod settings;
 
 use clap::{Arg, Command};
-use managerlibusb::Manager;
+use managerrusb::Manager;
 //use managerusbxpress::Manager;
 use run_script::ScriptOptions;
 use settings::Settings;
@@ -142,7 +143,8 @@ fn main() {
             loop {
                 //exit cleanly, and relase usb
 
-                let (_code, output, _error) = run_script::run(path, &vec![], &ScriptOptions::new()).unwrap_or_else(|_| panic!("Could not run script {path}"));
+                let (_code, output, _error) = run_script::run(path, &vec![], &ScriptOptions::new())
+                    .unwrap_or_else(|_| panic!("Could not run script {path}"));
                 manager.set_values_from_input(&output, time);
 
                 if must_exit.load(std::sync::atomic::Ordering::Relaxed) {

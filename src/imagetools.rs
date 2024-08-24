@@ -11,8 +11,7 @@ use rusttype::{point, Font, Scale};
 
 use crate::{input::Input, settings::Settings};
 
-//static FONT_DATA: &[u8] = include_bytes!("/usr/share/fonts/TTF/JetBrainsMono-ExtraBold.ttf");
-static FONT_DATA: &[u8] = include_bytes!("c:/temp/JetBrainsMono-ExtraBold.ttf");
+static FONT_DATA: &[u8] = include_bytes!("../Tuffy_Bold.ttf");
 
 pub fn convert_image_from_path(path: &str) -> DynamicImage {
     let img = Reader::open(path).unwrap().decode().unwrap();
@@ -47,13 +46,45 @@ pub fn image_from_input(input: Input, settings: &Settings) -> Vec<u8> {
     let mut image = DynamicImage::new_rgba8(320, 320);
 
     if input.values.len() == 1 {
-        draw_bars(&mut image, input.values[0], input.values[0], settings.left_bar, settings.right_bar);
-        draw_value(&mut image, &[&input.get_string_at(0)], settings.left_value, settings.right_value);
-        draw_title(&mut image, &[&input.get_title_at(0)], settings.left_title, settings.right_title);
+        draw_bars(
+            &mut image,
+            input.values[0],
+            input.values[0],
+            settings.left_bar,
+            settings.right_bar,
+        );
+        draw_value(
+            &mut image,
+            &[&input.get_string_at(0)],
+            settings.left_value,
+            settings.right_value,
+        );
+        draw_title(
+            &mut image,
+            &[&input.get_title_at(0)],
+            settings.left_title,
+            settings.right_title,
+        );
     } else if input.values.len() >= 2 {
-        draw_bars(&mut image, input.values[0], input.values[1], settings.left_bar, settings.right_bar);
-        draw_value(&mut image, &[&input.get_string_at(0), &input.get_string_at(1)], settings.left_value, settings.right_value);
-        draw_title(&mut image, &[&input.get_title_at(0), &input.get_title_at(1)], settings.left_title, settings.right_title);
+        draw_bars(
+            &mut image,
+            input.values[0],
+            input.values[1],
+            settings.left_bar,
+            settings.right_bar,
+        );
+        draw_value(
+            &mut image,
+            &[&input.get_string_at(0), &input.get_string_at(1)],
+            settings.left_value,
+            settings.right_value,
+        );
+        draw_title(
+            &mut image,
+            &[&input.get_title_at(0), &input.get_title_at(1)],
+            settings.left_title,
+            settings.right_title,
+        );
     }
     if input.time || settings.show_time {
         draw_time(&mut image, settings.time);
@@ -64,11 +95,17 @@ pub fn image_from_input(input: Input, settings: &Settings) -> Vec<u8> {
 
     let image = image.fliph();
     let image = image.flipv();
-    //   image.save("/temp/test.png").unwrap();
+    //image.save("/tmp/test.png").unwrap();
     image.to_bytes()
 }
 
-fn draw_bars(image: &mut DynamicImage, left_val: f32, right_val: f32, left_col: Rgba<u8>, right_col: Rgba<u8>) {
+fn draw_bars(
+    image: &mut DynamicImage,
+    left_val: f32,
+    right_val: f32,
+    left_col: Rgba<u8>,
+    right_col: Rgba<u8>,
+) {
     let width = 33.0;
     let black = Rgba([0, 0, 0, 255]);
     let grey = Rgba([30, 30, 30, 255]);
@@ -76,7 +113,9 @@ fn draw_bars(image: &mut DynamicImage, left_val: f32, right_val: f32, left_col: 
     let cr = (320.0 - width) / 2.0; //between outer 320 and inner 240
     let tr = 1520.0 / 2.0;
     //left
-    let left_ratio = ((left_val.min(100.) as f32 - 0.0) / 120.0).max(0.0).min(1.0);
+    let left_ratio = ((left_val.min(100.) as f32 - 0.0) / 120.0)
+        .max(0.0)
+        .min(1.0);
     let left_theta = left_ratio * PI / 2.0;
     let lcw = cr * left_theta.cos();
     let lch = cr * left_theta.sin();
@@ -84,7 +123,9 @@ fn draw_bars(image: &mut DynamicImage, left_val: f32, right_val: f32, left_col: 
     let lth = tr * left_theta.sin();
 
     //right
-    let right_ratio = ((right_val.min(100.) as f32 - 0.0) / 120.0).max(0.0).min(1.0);
+    let right_ratio = ((right_val.min(100.) as f32 - 0.0) / 120.0)
+        .max(0.0)
+        .min(1.0);
     let right_theta = right_ratio * PI / 2.0;
     let rcw = cr * right_theta.cos();
     let rch = cr * right_theta.sin();
@@ -129,10 +170,30 @@ fn draw_bars(image: &mut DynamicImage, left_val: f32, right_val: f32, left_col: 
     draw_filled_circle_mut(image, (160, 160), 160 - width as i32, black);
 
     //ends
-    draw_filled_circle_mut(image, ((160.0 - lcw) as i32, (160.0 - lch) as i32), (width / 2.0) as i32, left_col);
-    draw_filled_circle_mut(image, ((160.0 - lcw) as i32, (160.0 + lch) as i32), (width / 2.0) as i32, left_col);
-    draw_filled_circle_mut(image, ((160.0 + rcw) as i32, (160.0 - rch) as i32), (width / 2.0) as i32, right_col);
-    draw_filled_circle_mut(image, ((160.0 + rcw) as i32, (160.0 + rch) as i32), (width / 2.0) as i32, right_col);
+    draw_filled_circle_mut(
+        image,
+        ((160.0 - lcw) as i32, (160.0 - lch) as i32),
+        (width / 2.0) as i32,
+        left_col,
+    );
+    draw_filled_circle_mut(
+        image,
+        ((160.0 - lcw) as i32, (160.0 + lch) as i32),
+        (width / 2.0) as i32,
+        left_col,
+    );
+    draw_filled_circle_mut(
+        image,
+        ((160.0 + rcw) as i32, (160.0 - rch) as i32),
+        (width / 2.0) as i32,
+        right_col,
+    );
+    draw_filled_circle_mut(
+        image,
+        ((160.0 + rcw) as i32, (160.0 + rch) as i32),
+        (width / 2.0) as i32,
+        right_col,
+    );
 }
 
 fn draw_time(image: &mut DynamicImage, col: Rgba<u8>) {
@@ -194,6 +255,9 @@ fn get_width(string: &str, font: &Font, scale: Scale) -> u32 {
     //calc size of 1 char
     let glyphs: Vec<_> = font.layout("8", scale, point(0.0, 0.0)).collect();
 
-    let max_x = glyphs.last().map(|g| g.pixel_bounding_box().unwrap_or_default().max.x).unwrap();
+    let max_x = glyphs
+        .last()
+        .map(|g| g.pixel_bounding_box().unwrap_or_default().max.x)
+        .unwrap();
     max_x as u32 * string.graphemes(true).count() as u32
 }
