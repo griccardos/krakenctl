@@ -9,7 +9,7 @@ build = "build.rs"
 [dependencies]
 rusb = "0.9"         #for usb
 image = "0.25.2"     #for editing images. Use 0.23.6 because 0.24.1 not compat with imageproc
-imageproc = "0.25.0" # for editing images
+imageproc = "0.25.0" # for editing image
 ab_glyph = "0.2.28"  #for font rendering for imageproc
 
 rand = "0.8.5"
@@ -19,5 +19,5 @@ unicode-segmentation = "1.11.0"
 gif = "0.13.1"
 chrono = "0.4.38"
 dirs = "5.0.1"
-run_script = "0.10.1"           #for running script
-signal-hook = "0.3.17"          #catch forced exits, so we can cleanup
+run_script = "0.10.1"                                #for running script
+signal-hook = "0.3.17"                               #catch forced exits, so we can cleanup

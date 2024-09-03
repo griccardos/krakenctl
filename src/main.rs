@@ -10,8 +10,9 @@ use clap::Parser;
 use managerrusb::Manager;
 use run_script::ScriptOptions;
 use settings::Settings;
+use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM, SIGTSTP};
 use std::{
-    sync::{atomic::AtomicBool, Arc},
+    sync::{atomic::AtomicUsize, Arc},
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -59,6 +60,8 @@ struct Cli {
 fn main() {
     let start = Instant::now();
 
+    //setup forced exit scenarios
+
     let clapp = Cli::parse();
 
     let settings = Settings::load();
@@ -70,9 +73,6 @@ fn main() {
     }
 
     let mut manager = Manager::new(debugging, settings);
-
-    //setup forced exit scenarios
-    let must_exit = Arc::new(AtomicBool::new(false));
 
     if clapp.liquid {
         manager.set_liquid();
@@ -89,14 +89,26 @@ fn main() {
     } else if let Some(input) = clapp.values {
         manager.set_values_from_input(&input, time);
     } else if let Some(path) = clapp.script {
+        let term = Arc::new(AtomicUsize::new(0));
+
+        signal_hook::flag::register_usize(SIGTERM, Arc::clone(&term), SIGTERM as usize).unwrap();
+        signal_hook::flag::register_usize(SIGINT, Arc::clone(&term), SIGINT as usize).unwrap();
+        signal_hook::flag::register_usize(SIGTSTP, Arc::clone(&term), SIGTSTP as usize).unwrap();
+        signal_hook::flag::register_usize(SIGHUP, Arc::clone(&term), SIGHUP as usize).unwrap();
+
         loop {
-            //exit cleanly, and relase usb
             let (_code, output, _error) = run_script::run(&path, &vec![], &ScriptOptions::new())
                 .unwrap_or_else(|_| panic!("Could not run script {path}"));
             manager.set_values_from_input(&output, time);
 
-            if must_exit.load(std::sync::atomic::Ordering::Relaxed) {
-                break;
+            let sig = term.load(std::sync::atomic::Ordering::Relaxed);
+            match sig {
+                0 => (),
+                signal => {
+                    eprintln!("Got signal to exit with code {signal}");
+                    manager.set_liquid();
+                    break;
+                }
             }
 
             sleep(Duration::from_secs(1));

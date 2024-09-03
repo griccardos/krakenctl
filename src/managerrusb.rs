@@ -50,20 +50,24 @@ macro_rules! buff {
 
     }};
 }
+
 impl Drop for Manager {
     fn drop(&mut self) {
         let context = rusb::Context::new().unwrap();
-        let device_handle = context
-            .open_device_with_vid_pid(0x1e71, 0x3008)
-            .expect("Could not open kraken for bulk");
-
-        for &i in self.kernel_drivers.iter() {
-            device_handle.attach_kernel_driver(i).unwrap();
-            if self.debugging {
-                println!("kernel attach:{i:?}");
+        if let Some(device_handle) = context.open_device_with_vid_pid(0x1e71, 0x3008) {
+            for &i in self.kernel_drivers.iter() {
+                if device_handle.attach_kernel_driver(i).is_ok() {
+                    if self.debugging {
+                        println!("kernel attach:{i:?}");
+                    }
+                } else {
+                    eprintln!("could not attach kernel driver")
+                }
+            }
+            if device_handle.reset().is_err() {
+                eprintln!("Could not reset device handle");
             }
         }
-        device_handle.reset().unwrap();
     }
 }
 
@@ -110,28 +114,32 @@ impl Manager {
     }
 
     pub fn set_blank(&mut self) {
-        let dev = self.get_handle();
-        self.write_to_interrupt(&dev, buff![0x38, 1 ;64]);
+        if let Some(dev) = self.get_handle() {
+            self.write_to_interrupt(&dev, buff![0x38, 1 ;64]);
+        }
     }
 
     pub fn set_liquid(&mut self) {
-        let device_handle = self.get_handle();
-        self.write_to_interrupt(&device_handle, buff![0x38,1,2;64]);
+        if let Some(device_handle) = self.get_handle() {
+            self.write_to_interrupt(&device_handle, buff![0x38,1,2;64]);
+        }
     }
 
     pub fn set_brightness(&mut self, brightness: u8) {
         if brightness > 100 {
             return;
         }
-        let device_handle = self.get_handle();
-        self.write_to_interrupt(&device_handle, buff![0x30,2,1,brightness;64]);
+        if let Some(device_handle) = self.get_handle() {
+            self.write_to_interrupt(&device_handle, buff![0x30,2,1,brightness;64]);
+        }
     }
 
     pub fn loop_images(&mut self) {
-        let device_handle = self.get_handle();
-        for i in 1..=16 {
-            self.set_image_at_index(&device_handle, i);
-            std::thread::sleep(Duration::from_millis(1500));
+        if let Some(device_handle) = self.get_handle() {
+            for i in 1..=16 {
+                self.set_image_at_index(&device_handle, i);
+                std::thread::sleep(Duration::from_millis(1500));
+            }
         }
     }
 
@@ -140,46 +148,46 @@ impl Manager {
     }
 
     pub fn set_image_with_bytes(&mut self, img_bytes: &[u8], is_gif: bool) {
-        let device_handle = self.get_handle();
-        if self.image_index.is_none() {
-            //clear images
-            for i in 0..16 {
-                self.write_to_interrupt(&device_handle, buff![0x30,4,i;64]);
+        if let Some(device_handle) = self.get_handle() {
+            if self.image_index.is_none() {
+                //clear images
+                for i in 0..16 {
+                    self.write_to_interrupt(&device_handle, buff![0x30,4,i;64]);
+                }
+
+                let rand_index: usize = rand::random::<usize>() % 16;
+                self.image_index = Some(rand_index);
             }
 
-            let rand_index: usize = rand::random::<usize>() % 16;
-            self.image_index = Some(rand_index);
-        }
+            let mut mem_index = [[0u8; 2]; 16];
+            mem_index[0] = [0x00, 0x00];
+            mem_index[1] = [0x90, 0x01];
+            mem_index[2] = [0x20, 0x03];
+            mem_index[3] = [0xb0, 0x04];
+            mem_index[4] = [0x40, 0x06];
+            mem_index[5] = [0xd0, 0x07];
+            mem_index[6] = [0x60, 0x09];
+            mem_index[7] = [0xf0, 0x0a];
+            mem_index[8] = [0x80, 0x0c];
+            mem_index[9] = [0x10, 0x0e];
+            mem_index[10] = [0xa0, 0x0f];
+            mem_index[11] = [0x30, 0x11];
+            mem_index[12] = [0xc0, 0x12];
+            mem_index[13] = [0x50, 0x14];
+            mem_index[14] = [0xe0, 0x15];
+            mem_index[15] = [0x70, 0x17];
 
-        let mut mem_index = [[0u8; 2]; 16];
-        mem_index[0] = [0x00, 0x00];
-        mem_index[1] = [0x90, 0x01];
-        mem_index[2] = [0x20, 0x03];
-        mem_index[3] = [0xb0, 0x04];
-        mem_index[4] = [0x40, 0x06];
-        mem_index[5] = [0xd0, 0x07];
-        mem_index[6] = [0x60, 0x09];
-        mem_index[7] = [0xf0, 0x0a];
-        mem_index[8] = [0x80, 0x0c];
-        mem_index[9] = [0x10, 0x0e];
-        mem_index[10] = [0xa0, 0x0f];
-        mem_index[11] = [0x30, 0x11];
-        mem_index[12] = [0xc0, 0x12];
-        mem_index[13] = [0x50, 0x14];
-        mem_index[14] = [0xe0, 0x15];
-        mem_index[15] = [0x70, 0x17];
+            //delete bucket
+            for i in 0..2 {
+                //let random = rand::random::<usize>() % 16;
+                self.image_index = Some(i % 16);
+                let index = (self.image_index.unwrap() % 16) as u8;
 
-        //delete bucket
-        for i in 0..2 {
-            //let random = rand::random::<usize>() % 16;
-            self.image_index = Some(i % 16);
-            let index = (self.image_index.unwrap() % 16) as u8;
+                self.image_index = Some(self.image_index.unwrap() + 1);
 
-            self.image_index = Some(self.image_index.unwrap() + 1);
+                self.write_to_interrupt(&device_handle, buff![0x32,2,index;64]);
 
-            self.write_to_interrupt(&device_handle, buff![0x32,2,index;64]);
-
-            let setup_bytes = buff![
+                let setup_bytes = buff![
             0x32,
             1,
             index,
@@ -191,13 +199,13 @@ impl Manager {
             1
             ;64];
 
-            self.write_to_interrupt(&device_handle, setup_bytes);
-            let delay = 100;
-            //start bulk write
-            self.write_to_interrupt(&device_handle, buff![0x36,1,index; 64]);
-            std::thread::sleep(Duration::from_millis(delay));
-            //BULK
-            let mut header = buff![
+                self.write_to_interrupt(&device_handle, setup_bytes);
+                let delay = 100;
+                //start bulk write
+                self.write_to_interrupt(&device_handle, buff![0x36,1,index; 64]);
+                std::thread::sleep(Duration::from_millis(delay));
+                //BULK
+                let mut header = buff![
         0x12,
         0xfa,
         0x01,
@@ -218,20 +226,21 @@ impl Manager {
         0x40,
          0x6
          ;512];
-            if is_gif {
-                header[12] = 1;
+                if is_gif {
+                    header[12] = 1;
+                }
+
+                self.write_to_bulk(&device_handle, &header);
+                std::thread::sleep(Duration::from_millis(delay));
+                self.write_to_bulk(&device_handle, img_bytes);
+
+                //end bulk write
+                self.write_to_interrupt(&device_handle, buff![0x36,2;64]);
+                //wait for image to finish sending
+
+                //show image at index
+                self.set_image_at_index(&device_handle, index);
             }
-
-            self.write_to_bulk(&device_handle, &header);
-            std::thread::sleep(Duration::from_millis(delay));
-            self.write_to_bulk(&device_handle, img_bytes);
-
-            //end bulk write
-            self.write_to_interrupt(&device_handle, buff![0x36,2;64]);
-            //wait for image to finish sending
-
-            //show image at index
-            self.set_image_at_index(&device_handle, index);
         }
     }
 
@@ -291,39 +300,46 @@ Firmware {}.{}.{}",
         }
     }
 
-    fn get_handle(&mut self) -> DeviceHandle<Context> {
+    fn get_handle(&mut self) -> Option<DeviceHandle<Context>> {
         let mut context = rusb::Context::new().unwrap();
         if self.debugging {
             context.set_log_level(rusb::LogLevel::Debug);
         }
-        let device_handle = context
-            .open_device_with_vid_pid(0x1e71, 0x3008)
-            .expect("Could not open kraken for bulk");
+        let device_handle = context.open_device_with_vid_pid(0x1e71, 0x3008)?;
 
         device_handle.set_active_configuration(1).unwrap();
-        device_handle
+        Some(device_handle)
     }
 
     fn write_to_interrupt(&mut self, device_handle: &DeviceHandle<Context>, bytes: Vec<u8>) {
-        device_handle.claim_interface(1).expect("Could not claim");
-        let result = device_handle.write_interrupt(1, &bytes, Duration::from_millis(200));
-        if let Err(err) = result {
-            println!("Error writing to interface {err}");
+        if device_handle.claim_interface(1).is_err() {
+            eprintln!("Could not claim");
             return;
         }
-        device_handle
-            .release_interface(1)
-            .expect("Could not release interface");
+        let result = device_handle.write_interrupt(1, &bytes, Duration::from_millis(200));
+        if let Err(err) = result {
+            eprintln!("Error writing to interface {err}");
+            return;
+        }
+        if device_handle.release_interface(1).is_err() {
+            eprint!("Could not release interface");
+        }
     }
 
     fn write_to_bulk(&mut self, device_handle: &DeviceHandle<Context>, bytes: &[u8]) {
-        device_handle.claim_interface(0).expect("Could not claim");
-        device_handle
-            .write_bulk(2, bytes, Duration::from_millis(200))
-            .expect("Could not write to bulk");
-        device_handle
-            .release_interface(0)
-            .expect("Could not release interface");
+        if device_handle.claim_interface(0).is_err() {
+            eprintln!("Could not claim interface");
+        } else {
+            if device_handle
+                .write_bulk(2, bytes, Duration::from_millis(200))
+                .is_err()
+            {
+                eprintln!("Could not write to bulk");
+            }
+            if device_handle.release_interface(0).is_err() {
+                eprintln!("Could not release interface");
+            }
+        }
     }
 
     pub fn set_values_from_input(&mut self, input: &str, time: bool) {
