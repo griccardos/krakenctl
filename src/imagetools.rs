@@ -11,7 +11,7 @@ use imageproc::{
 
 use crate::{input::Input, settings::Settings};
 
-static FONT_DATA: &[u8] = include_bytes!("../Tuffy_Bold.ttf");
+static FONT_DATA: &[u8] = include_bytes!("../JetbrainsMonoBold.ttf");
 
 pub fn convert_image_from_path(path: &str) -> DynamicImage {
     let img = ImageReader::open(path).unwrap().decode().unwrap();
@@ -199,7 +199,7 @@ fn draw_bars(
 fn draw_time(image: &mut DynamicImage, col: Rgba<u8>) {
     let font = FontRef::try_from_slice(FONT_DATA).expect("Error constructing Font");
 
-    let scale = 40.0;
+    let scale = 50.0;
     let ch = Local::now();
     let val = format!("{}:{:0>2}", ch.time().hour(), ch.time().minute());
     let x: i32 = 160 - get_width(&val, &font, scale) as i32 / 2;
@@ -211,14 +211,18 @@ fn draw_value(image: &mut DynamicImage, vals: &[&str], left_col: Rgba<u8>, right
     if vals.len() == 1 {
         let scale = 80.0;
         let val = truncate(vals[0], 6); //max 6
-        let x: i32 = 160 - get_width(&val, &font, scale) / 2;
+        let width = get_width(&val, &font, scale);
+        let x: i32 = 160 - width / 2;
+
         draw_text_mut(image, left_col, x, 110, scale, &font, &val);
     } else if vals.len() >= 2 {
-        let scale = 60.0;
+        let scale = 65.0;
         let val0 = truncate(vals[0], 4); //max 6
         let val1 = truncate(vals[1], 4);
-        let x0 = 105 - get_width(&val0, &font, scale) / 2;
-        let x1 = 215 - get_width(&val1, &font, scale) / 2;
+        let width0 = get_width(&val0, &font, scale);
+        let width1 = get_width(&val1, &font, scale);
+        let x0 = 105 - width0 / 2;
+        let x1 = 215 - width1 / 2;
         draw_text_mut(image, left_col, x0, 120, scale, &font, &val0);
         draw_text_mut(image, right_col, x1, 120, scale, &font, &val1);
     }
@@ -236,8 +240,10 @@ fn draw_title(image: &mut DynamicImage, vals: &[&str], left_col: Rgba<u8>, right
         let scale = 40.0;
         let val0 = truncate(vals[0], 4); //max 6
         let val1 = truncate(vals[1], 4);
-        let x0 = 105 - get_width(&val0, &font, scale) / 2;
-        let x1 = 215 - get_width(&val1, &font, scale) / 2;
+        let width0 = get_width(&val0, &font, scale);
+        let width1 = get_width(&val1, &font, scale);
+        let x0 = 105 - width0 / 2;
+        let x1 = 215 - width1 / 2;
         draw_text_mut(image, left_col, x0, 190, scale, &font, &val0);
         draw_text_mut(image, right_col, x1, 190, scale, &font, &val1);
     }

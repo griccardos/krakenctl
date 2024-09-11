@@ -343,6 +343,10 @@ Firmware {}.{}.{}",
     }
 
     pub fn set_values_from_input(&mut self, input: &str, time: bool) {
+        //we strip any newlines from the input and trim ends
+        let input = input.replace("\n", "").replace("\r", "");
+        let input = input.trim();
+
         let val = Input::new(input, time);
         let start = Instant::now();
         let im = imagetools::image_from_input(val, &self.settings);
@@ -387,5 +391,9 @@ Firmware {}.{}.{}",
         device_handle.reset().expect("Could not reset device");
 
         bytes
+    }
+
+    pub(crate) fn reload_settings(&mut self) {
+        self.settings.reload_if_changed();
     }
 }

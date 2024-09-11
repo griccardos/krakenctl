@@ -2,6 +2,7 @@ use image::Rgba;
 use std::{
     fs::File,
     io::{BufReader, Read},
+    time::SystemTime,
 };
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ pub struct Settings {
     pub left_title: Rgba<u8>,
     pub right_title: Rgba<u8>,
     pub show_time: bool,
+    pub loaded: SystemTime,
 }
 
 impl Default for Settings {
@@ -27,10 +29,10 @@ impl Default for Settings {
             left_title: Rgba([120, 120, 255, 255]),
             right_title: Rgba([120, 120, 255, 255]),
             show_time: false,
+            loaded: SystemTime::now(),
         }
     }
 }
-
 impl Settings {
     pub fn load() -> Self {
         let path = dirs::config_dir();
@@ -78,6 +80,30 @@ impl Settings {
             }
         }
         settings
+    }
+    fn path() -> std::path::PathBuf {
+        let path = dirs::config_dir();
+        if path.is_none() {
+            return std::path::PathBuf::new(); //no config dir
+        }
+        let mut path = path.unwrap();
+        path.push("krakenctl");
+        path.push("config.ini");
+        path
+    }
+    pub fn reload_if_changed(&mut self) {
+        let path = Settings::path();
+        if !path.exists() {
+            return; //no config file
+        }
+        let metadata = path.metadata();
+        if metadata.is_err() {
+            return; //no read permission
+        }
+        let metadata = metadata.unwrap();
+        if metadata.modified().unwrap() > self.loaded {
+            *self = Settings::load();
+        }
     }
 }
 
