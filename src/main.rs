@@ -10,7 +10,9 @@ use clap::Parser;
 use managerrusb::Manager;
 use run_script::ScriptOptions;
 use settings::Settings;
-use signal_hook::consts::{SIGHUP, SIGINT, SIGTERM, SIGTSTP};
+#[cfg(target_os = "unix")]
+use signal_hook::consts::{SIGHUP, SIGTSTP};
+use signal_hook::consts::{SIGINT, SIGTERM};
 use std::{
     sync::{atomic::AtomicUsize, Arc},
     thread::sleep,
@@ -26,7 +28,7 @@ struct Cli {
     #[arg(short, long, help = "Displays blank screen")]
     blank: bool,
 
-    #[arg(long, help = "Set brightness (0-100)")]
+    #[arg(long, short = 'k', help = "Set brightness (0-100)")]
     brightness: Option<u8>,
 
     #[arg(
@@ -102,9 +104,12 @@ fn main() {
         maybe_repeat(
             move || {
                 let ss = systemstat::System::new();
-                let temp = ss.cpu_temp().unwrap();
-                println!("temp is {temp}");
-                manager.set_values_from_input(&format!("{temp}°"), time);
+                if let Ok(temp) = ss.cpu_temp() {
+                    println!("temp is {temp}");
+                    manager.set_values_from_input(&format!("{temp}°"), time);
+                } else {
+                    println!("Getting CPU temp is not supported on this platform");
+                }
             },
             clapp.repeat.clone(),
         );
@@ -140,9 +145,11 @@ fn maybe_repeat<F: FnMut()>(mut func: F, rep: Option<u64>) {
 
     signal_hook::flag::register_usize(SIGTERM, Arc::clone(&term), SIGTERM as usize).unwrap();
     signal_hook::flag::register_usize(SIGINT, Arc::clone(&term), SIGINT as usize).unwrap();
-    signal_hook::flag::register_usize(SIGTSTP, Arc::clone(&term), SIGTSTP as usize).unwrap();
-    signal_hook::flag::register_usize(SIGHUP, Arc::clone(&term), SIGHUP as usize).unwrap();
-
+    #[cfg(target_os = "unix")]
+    {
+        signal_hook::flag::register_usize(SIGTSTP, Arc::clone(&term), SIGTSTP as usize).unwrap();
+        signal_hook::flag::register_usize(SIGHUP, Arc::clone(&term), SIGHUP as usize).unwrap();
+    }
     loop {
         func(); //run the function
 

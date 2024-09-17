@@ -313,7 +313,7 @@ Firmware {}.{}.{}",
 
     fn write_to_interrupt(&mut self, device_handle: &DeviceHandle<Context>, bytes: Vec<u8>) {
         if device_handle.claim_interface(1).is_err() {
-            eprintln!("Could not claim");
+            eprintln!("Could not claim interrupt interface");
             return;
         }
         let result = device_handle.write_interrupt(1, &bytes, Duration::from_millis(200));
@@ -327,8 +327,8 @@ Firmware {}.{}.{}",
     }
 
     fn write_to_bulk(&mut self, device_handle: &DeviceHandle<Context>, bytes: &[u8]) {
-        if device_handle.claim_interface(0).is_err() {
-            eprintln!("Could not claim interface");
+        if let Err(err) = device_handle.claim_interface(0) {
+            eprintln!("Could not claim bulk interface {}", err);
         } else {
             if device_handle
                 .write_bulk(2, bytes, Duration::from_millis(200))

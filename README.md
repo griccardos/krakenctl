@@ -17,6 +17,7 @@ This is alpha software, and may damage your device. Your cooler may stop functio
 Go to releases section, and download executable from there.
 Or install rustup, and clone this repo, and run `cargo build --release` to build the executable.
 
+#### linux
 You need to run as root, or you need to give your user permissions to access the USB device.
 To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` and insert the following line:
 
@@ -24,6 +25,13 @@ To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` an
 
 Then run `reboot`
 
+#### windows
+- this requires usb-1.0.lib and libusb-1.0.lib to be placed in the libusb directory (download latest).
+- cargo build
+- stop nzxt cam software
+- disable cam service
+- download zadig usb driver insaller. (Use at your own risk)
+- select Kraken interface 0. and install winusb
 
 ### How to use
 $ krakenctl [OPTIONS]
@@ -88,16 +96,15 @@ krakenctl is written in rust, and uses the rusb crate which in turn uses libusb 
 - [x] values with subtitles
 - [x] linux support
 - [x] custom colours
-- [ ] windows support
+- [x] windows support
 - [ ] custom image
 - [ ] custom animation
-- [ ] getting USB to not lockup if boot to windows
 
 ### Tested
 | OS | Version | Status |
 | :--- | :--- | :--- |
 | Linux | Arch | yes  |
-| Windows | 10 | ❎ |
+| Windows | 10 | yes |
 
 ### Contribute
 If you find this application useful, or would like to make a contribution for continued development, you can buy me a coffee.
