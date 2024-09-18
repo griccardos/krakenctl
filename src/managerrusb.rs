@@ -1,6 +1,6 @@
 use crate::{imagetools, input::Input, settings::Settings};
 use image::EncodableLayout;
-use rusb::{Context, DeviceHandle, UsbContext};
+use rusb::{Context, DeviceHandle, LogLevel, UsbContext};
 
 use std::{
     fs::File,
@@ -29,7 +29,7 @@ pub struct Status {
 pub struct Manager {
     settings: Settings,
     image_index: Option<usize>,
-    pub debugging: bool,
+    pub debug_level: DebugLevel,
     kernel_drivers: Vec<u8>,
 }
 
@@ -51,17 +51,47 @@ macro_rules! buff {
     }};
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+pub enum DebugLevel {
+    None,
+    Error,
+    Warning,
+    Info,
+    Debug,
+}
+impl From<DebugLevel> for LogLevel {
+    fn from(value: DebugLevel) -> Self {
+        match value {
+            DebugLevel::None => LogLevel::None,
+            DebugLevel::Info => LogLevel::Info,
+            DebugLevel::Debug => LogLevel::Debug,
+            DebugLevel::Error => LogLevel::Error,
+            DebugLevel::Warning => LogLevel::Warning,
+        }
+    }
+}
+impl From<String> for DebugLevel {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "0" => DebugLevel::None,
+            "1" => DebugLevel::Error,
+            "2" => DebugLevel::Warning,
+            "3" => DebugLevel::Info,
+            "4" => DebugLevel::Debug,
+            _ => DebugLevel::Debug,
+        }
+    }
+}
+
 impl Drop for Manager {
     fn drop(&mut self) {
         let context = rusb::Context::new().unwrap();
         if let Some(device_handle) = context.open_device_with_vid_pid(0x1e71, 0x3008) {
             for &i in self.kernel_drivers.iter() {
                 if device_handle.attach_kernel_driver(i).is_ok() {
-                    if self.debugging {
-                        println!("kernel attach:{i:?}");
-                    }
+                    self.debug(format!("kernel attach:{i:?}"), DebugLevel::Debug);
                 } else {
-                    eprintln!("could not attach kernel driver")
+                    self.debug(format!("could not attach kernel driver"), DebugLevel::Debug);
                 }
             }
             if device_handle.reset().is_err() {
@@ -73,7 +103,7 @@ impl Drop for Manager {
 
 #[allow(clippy::vec_init_then_push)]
 impl Manager {
-    pub fn new(debugging: bool, settings: Settings) -> Self {
+    pub fn new(debug_level: DebugLevel, settings: Settings) -> Self {
         let mut vec = vec![];
         let context = rusb::Context::new().unwrap();
 
@@ -82,7 +112,7 @@ impl Manager {
             .expect("Could not open kraken");
         device_handle.reset().unwrap();
 
-        if debugging {
+        if debug_level >= DebugLevel::Info {
             println!("config: {:?}", device_handle.active_configuration());
         }
 
@@ -91,20 +121,20 @@ impl Manager {
             if has_k {
                 device_handle.detach_kernel_driver(i).unwrap();
                 vec.push(i);
-                if debugging {
+                if debug_level >= DebugLevel::Debug {
                     println!("kernel detach:{i:?}");
                 }
             }
         }
         Manager {
             image_index: None,
-            debugging,
+            debug_level,
             settings,
             kernel_drivers: vec,
         }
     }
-    fn debug(&self, string: String) {
-        if self.debugging {
+    fn debug(&self, string: String, level: DebugLevel) {
+        if self.debug_level >= level {
             println!("{}", string);
         }
     }
@@ -302,9 +332,7 @@ Firmware {}.{}.{}",
 
     fn get_handle(&mut self) -> Option<DeviceHandle<Context>> {
         let mut context = rusb::Context::new().unwrap();
-        if self.debugging {
-            context.set_log_level(rusb::LogLevel::Debug);
-        }
+        context.set_log_level(self.debug_level.into());
         let device_handle = context.open_device_with_vid_pid(0x1e71, 0x3008)?;
 
         device_handle.set_active_configuration(1).unwrap();
@@ -343,6 +371,7 @@ Firmware {}.{}.{}",
     }
 
     pub fn set_values_from_input(&mut self, input: &str, time: bool) {
+        self.debug(format!("creating image from '{input}'"), DebugLevel::Info);
         //we strip any newlines from the input and trim ends
         let input = input.replace("\n", "").replace("\r", "");
         let input = input.trim();
@@ -354,16 +383,18 @@ Firmware {}.{}.{}",
         self.set_image_with_bytes(&im, false);
         let elap2 = start.elapsed() - elap1;
 
-        if self.debugging {
-            println!("creating image took {}ms", elap1.as_millis());
-            println!("setting image took {}ms", elap2.as_millis());
-        }
+        self.debug(
+            format!("creating image took {}ms", elap1.as_millis()),
+            DebugLevel::Info,
+        );
+        self.debug(
+            format!("setting image took {}ms", elap2.as_millis()),
+            DebugLevel::Info,
+        );
     }
     fn write_and_read_interface(&mut self, input: &[u8]) -> Vec<u8> {
         let mut context = rusb::Context::new().unwrap();
-        if self.debugging {
-            context.set_log_level(rusb::LogLevel::Debug);
-        }
+        context.set_log_level(self.debug_level.into());
         let device_handle = context
             .open_device_with_vid_pid(0x1e71, 0x3008)
             .expect("Could not open kraken for bulk");

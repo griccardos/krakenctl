@@ -19,6 +19,5 @@ unicode-segmentation = "1.11.0"
 gif = "0.13.1"
 chrono = "0.4.38"
 dirs = "5.0.1"
-run_script = "0.10.1"                                #for running script
 signal-hook = "0.3.17"                               #catch forced exits, so we can cleanup
 systemstat = "0.2"                                   #for getting system info

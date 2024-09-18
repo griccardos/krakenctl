@@ -7,8 +7,7 @@ mod managerrusb;
 mod settings;
 
 use clap::Parser;
-use managerrusb::Manager;
-use run_script::ScriptOptions;
+use managerrusb::{DebugLevel, Manager};
 use settings::Settings;
 #[cfg(target_os = "unix")]
 use signal_hook::consts::{SIGHUP, SIGTSTP};
@@ -47,8 +46,15 @@ struct Cli {
     #[arg(long, help = "Show time")]
     time: bool,
 
-    #[arg(short, long, help = "Debug mode")]
-    debug: bool,
+    #[arg(
+        short,
+        long,
+        help = "Debug mode",
+        num_args= 0..=1,//required for optional argument
+        default_missing_value = "3", //for when no value added
+        default_value = "0" //for when not added
+    )]
+    debug: String,
 
     #[arg(long, help = "Read device status")]
     status: bool,
@@ -80,13 +86,13 @@ fn main() {
 
     let settings = Settings::load();
 
-    let debugging = clapp.debug;
+    let debug_level = clapp.debug.into();
     let time = clapp.time;
-    if debugging {
+    if debug_level >= DebugLevel::Info {
         println!("{settings:?}");
     }
 
-    let mut manager = Manager::new(debugging, settings);
+    let mut manager = Manager::new(debug_level, settings);
 
     if clapp.liquid {
         manager.set_liquid();
@@ -119,12 +125,30 @@ fn main() {
             clapp.repeat.clone(),
         );
     } else if let Some(path) = clapp.script {
+        if debug_level >= DebugLevel::Info {
+            println!("running script '{path}'");
+        }
         maybe_repeat(
             move || {
-                let (_code, output, _error) =
-                    run_script::run(&path, &vec![], &ScriptOptions::new())
-                        .unwrap_or_else(|_| panic!("Could not run script {path}"));
-                manager.set_values_from_input(&output, time);
+                let (cmd, arg) = if cfg!(target_os = "windows") {
+                    ("powershell", vec![&path])
+                } else {
+                    (path.as_str(), vec![])
+                };
+                let output = std::process::Command::new(&cmd)
+                    .args(arg)
+                    .output()
+                    .unwrap_or_else(|err| panic!("Could not run script '{path}': {err}"));
+                let (stdo, stde, status) = (
+                    String::from_utf8(output.stdout).unwrap_or_default(),
+                    String::from_utf8(output.stderr).unwrap_or_default(),
+                    output.status,
+                );
+                if debug_level >= DebugLevel::Info {
+                    println!("out:{stdo} err:{stde} status:{status:?}")
+                }
+
+                manager.set_values_from_input(&stdo, time);
                 manager.reload_settings();
             },
             clapp.repeat.clone(),
@@ -135,7 +159,7 @@ fn main() {
         manager.set_gif(&path)
     }
 
-    if debugging {
+    if debug_level >= DebugLevel::Info {
         println!("Ran in {}ms", start.elapsed().as_millis());
     }
 }
@@ -163,7 +187,7 @@ fn maybe_repeat<F: FnMut()>(mut func: F, rep: Option<u64>) {
             0 => (),
             signal => {
                 eprintln!("Got signal to exit with code {signal}");
-                Manager::new(false, Settings::load()).set_liquid();
+                Manager::new(DebugLevel::None, Settings::load()).set_liquid();
                 break;
             }
         }

@@ -41,8 +41,14 @@ $ krakenctl [OPTIONS]
 | -b          | shows blank screen      |
 | -l          | shows liquid temperature   |
 | -v Valuestring      | shows value(s) and or subtitles (see below for examples)    |
-| -r brightness      | sets brightness between 0-100 e.g. krakenctl -r 60 |
-| --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. By default runs every 1 second |
+| -k brightness      | sets brightness between 0-100 e.g. krakenctl -k 60 |
+| -r N   | repeat every N seconds
+| --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. use -r 2 to run every 2 seconds |
+| -d L     | shows debug info for level 0(None) 3(Info) 5(Debug)  |
+
+note in linux, the script is run directly, in windows it is called by powershell
+- linux: krakenctl --script run.sh
+- windows: krakenctl --script run.ps1
 
 To show liquid
 
@@ -53,9 +59,9 @@ For example if cputemp.sh is the script that returns the temperature, and you wa
 
 $ while true; do krakenctl -v "$(cputemp.sh),$(gpu.sh);CPU,GPU"; sleep 1; done;
 
-or with script option
+or more efficiently with script option
 
-$ krakenctl --script cpu-and-gpu-temp.sh
+$ krakenctl --script cpu-and-gpu-temp.sh -r 2
 
 
 ### Valuestring
