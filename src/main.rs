@@ -130,13 +130,7 @@ fn main() {
         }
         maybe_repeat(
             move || {
-                let (cmd, arg) = if cfg!(target_os = "windows") {
-                    ("powershell", vec![&path])
-                } else {
-                    (path.as_str(), vec![])
-                };
-                let output = std::process::Command::new(&cmd)
-                    .args(arg)
+                let output = std::process::Command::new(&path)
                     .output()
                     .unwrap_or_else(|err| panic!("Could not run script '{path}': {err}"));
                 let (stdo, stde, status) = (
