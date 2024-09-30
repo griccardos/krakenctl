@@ -46,9 +46,9 @@ $ krakenctl [OPTIONS]
 | --script script-to-run.sh | Runs a script in the background. Ouput of script must be Valuestring. use -r 2 to run every 2 seconds |
 | -d L     | shows debug info for level 0(None) 3(Info) 5(Debug)  |
 
-note in linux, the script is run directly, in windows it is called by powershell
+
 - linux: krakenctl --script run.sh
-- windows: krakenctl --script run.ps1
+- windows: krakenctl --script run.exe
 
 To show liquid
 
