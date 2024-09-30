@@ -84,9 +84,18 @@ fn main() {
 
     let clapp = Cli::parse();
 
-    let settings = Settings::load();
-
     let debug_level = clapp.debug.into();
+
+    let settings = match Settings::load() {
+        Ok(s) => s,
+        Err(e) => {
+            if debug_level >= DebugLevel::Info {
+                println!("Could not load settings, using default. {e}");
+            }
+            Settings::default()
+        }
+    };
+
     let time = clapp.time;
     if debug_level >= DebugLevel::Info {
         println!("{settings:?}");
@@ -134,7 +143,10 @@ fn main() {
                     .output()
                     .unwrap_or_else(|err| panic!("Could not run script '{path}': {err}"));
                 let (stdo, stde, status) = (
-                    String::from_utf8(output.stdout).unwrap_or_default(),
+                    String::from_utf8(output.stdout)
+                        .unwrap_or_default()
+                        .replace("\n", "")
+                        .replace("\r", ""),
                     String::from_utf8(output.stderr).unwrap_or_default(),
                     output.status,
                 );
@@ -176,12 +188,13 @@ fn maybe_repeat<F: FnMut()>(mut func: F, rep: Option<u64>) {
         } else {
             break;
         }
+
         let sig = term.load(std::sync::atomic::Ordering::Relaxed);
         match sig {
             0 => (),
             signal => {
                 eprintln!("Got signal to exit with code {signal}");
-                Manager::new(DebugLevel::None, Settings::load()).set_liquid();
+                Manager::new(DebugLevel::None, Settings::default()).set_liquid();
                 break;
             }
         }

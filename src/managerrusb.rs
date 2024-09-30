@@ -1,4 +1,5 @@
 use crate::{imagetools, input::Input, settings::Settings};
+use chrono::{DateTime, Utc};
 use image::EncodableLayout;
 use rusb::{Context, DeviceHandle, LogLevel, UsbContext};
 
@@ -425,6 +426,19 @@ Firmware {}.{}.{}",
     }
 
     pub(crate) fn reload_settings(&mut self) {
-        self.settings.reload_if_changed();
+        if let Some(time) = Settings::modified_time() {
+            if time > self.settings.loaded {
+                if self.debug_level >= DebugLevel::Info {
+                    let ftime: DateTime<Utc> = time.into();
+                    let stimea: DateTime<Utc> = self.settings.loaded.into();
+                    println!(
+                        "Reloading settings as file time {}> loaded time{}",
+                        ftime.format("%Y-%m-%d %H:%M:%S"),
+                        stimea.format("%Y-%m-%d %H:%M:%S")
+                    );
+                }
+                self.settings = Settings::load().unwrap();
+            }
+        }
     }
 }

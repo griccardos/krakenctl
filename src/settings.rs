@@ -29,29 +29,33 @@ impl Default for Settings {
             left_title: Rgba([120, 120, 255, 255]),
             right_title: Rgba([120, 120, 255, 255]),
             show_time: false,
-            loaded: SystemTime::now(),
+            loaded: SystemTime::UNIX_EPOCH,
         }
     }
 }
 impl Settings {
-    pub fn load() -> Self {
+    pub fn get_file() -> Result<File, String> {
         let path = dirs::config_dir();
         if path.is_none() {
-            return Settings::default(); //no config dir
+            return Err("No config dir".to_string()); //no config dir
         }
         let mut path = path.unwrap();
         path.push("krakenctl");
         path.push("config.ini");
         if !path.exists() {
-            return Settings::default(); //no config file
+            return Err(format!("No config file at {path:?}")); //no config file
         }
-        let mut buffer = String::new();
         let file = File::open(&path);
         if file.is_err() {
-            return Settings::default(); //no read permission
+            return Err(format!("Could not open file {path:?}")); //no read permission
         }
-        let file = file.unwrap();
+        Ok(file.unwrap())
+    }
+    pub fn load() -> Result<Self, String> {
+        let file = Settings::get_file()?;
+
         let mut reader = BufReader::new(file);
+        let mut buffer = String::new();
 
         let _ = reader.read_to_string(&mut buffer);
         let lines = buffer
@@ -63,7 +67,10 @@ impl Settings {
             .map(|x| (x[0], x[1]))
             .collect::<Vec<(&str, &str)>>();
 
-        let mut settings = Settings::default();
+        let mut settings = Settings {
+            loaded: SystemTime::now(),
+            ..Default::default()
+        };
 
         for (left, right) in lines {
             match (left, right) {
@@ -79,7 +86,7 @@ impl Settings {
                 _ => (),
             }
         }
-        settings
+        Ok(settings)
     }
     fn path() -> std::path::PathBuf {
         let path = dirs::config_dir();
@@ -91,19 +98,10 @@ impl Settings {
         path.push("config.ini");
         path
     }
-    pub fn reload_if_changed(&mut self) {
-        let path = Settings::path();
-        if !path.exists() {
-            return; //no config file
-        }
-        let metadata = path.metadata();
-        if metadata.is_err() {
-            return; //no read permission
-        }
-        let metadata = metadata.unwrap();
-        if metadata.modified().unwrap() > self.loaded {
-            *self = Settings::load();
-        }
+
+    pub(crate) fn modified_time() -> Option<SystemTime> {
+        let file = Settings::get_file().ok()?;
+        file.metadata().ok()?.modified().ok()
     }
 }
 
