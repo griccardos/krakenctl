@@ -17,7 +17,7 @@ This is alpha software, and may damage your device. Your cooler may stop functio
 Go to releases section, and download executable from there.
 Or install rustup, and clone this repo, and run `cargo build --release` to build the executable.
 
-#### linux
+### linux
 You need to run as root, or you need to give your user permissions to access the USB device.
 To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` and insert the following line:
 
@@ -25,13 +25,15 @@ To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` an
 
 Then run `reboot`
 
-#### windows
-- this requires usb-1.0.lib and libusb-1.0.lib to be placed in the libusb directory (download latest).
+### windows
+- This requires usb-1.0.lib and libusb-1.0.lib to be placed in the libusb directory (download latest).
 - cargo build
-- stop nzxt cam software
-- disable cam service
-- download zadig usb driver insaller. (Use at your own risk)
-- select Kraken interface 0. and install winusb
+- Stop nzxt cam software
+- Disable cam service
+- Download zadig usb driver insaller. (Use at your own risk). Select Kraken interface 0 (ONLY 0, not 1). and install winusb (this downgrades from winusb10 to winusb6)
+- If windows no longer recognising the usb device after reboot:
+  - turn computer off, remove power cable or turn off power supply for a few seconds, turn back on
+  - boot into linux and run krakenctl there
 
 ### How to use
 $ krakenctl [OPTIONS]
@@ -47,8 +49,8 @@ $ krakenctl [OPTIONS]
 | -d L     | shows debug info for level 0(None) 3(Info) 5(Debug)  |
 
 
-- linux: krakenctl --script run.sh
-- windows: krakenctl --script run.exe
+- linux: krakenctl --script run.sh -r 1
+- windows: krakenctl --script run.exe -r 2
 
 To show liquid
 
@@ -87,11 +89,6 @@ Also, amounts without decimals is preferred.
 To configure, you can optionally create a config file in ~/.config/krakenctl/config.ini
 
 Download example config file above.
-
-### Current flaws
-When using krakenctl in linux, when booting into windows, the kraken USB device cannot be found, and thus cannot be used with the software that comes with the device. If you only use linux, probably not a problem, but if you dual boot, you can try the following ways to get it working on windows again. If anybody has any knowledge of why this happens, let me know.
-- with computer off, remove the usb cable from the Kraken and wait a few seconds and replace
-- turn off computer, COMPLETELY remove power cable, wait for 30 seconds (depends on motherboard), and replace
 
 ### Technical
 krakenctl is written in rust, and uses the rusb crate which in turn uses libusb library.

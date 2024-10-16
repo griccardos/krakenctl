@@ -1,9 +1,10 @@
 use crate::{imagetools, input::Input, settings::Settings};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use image::EncodableLayout;
 use rusb::{Context, DeviceHandle, LogLevel, UsbContext};
 
 use std::{
+    error::Error,
     fs::File,
     io::{BufReader, Read},
     time::{Duration, Instant},
@@ -86,57 +87,83 @@ impl From<String> for DebugLevel {
 
 impl Drop for Manager {
     fn drop(&mut self) {
-        let context = rusb::Context::new().unwrap();
-        if let Some(device_handle) = context.open_device_with_vid_pid(0x1e71, 0x3008) {
-            for &i in self.kernel_drivers.iter() {
-                if device_handle.attach_kernel_driver(i).is_ok() {
-                    self.debug(format!("kernel attach:{i:?}"), DebugLevel::Debug);
-                } else {
-                    self.debug(format!("could not attach kernel driver"), DebugLevel::Debug);
+        if let Some(device_handle) = self.get_handle() {
+            if let Err(_e) = device_handle.reset() {
+                self.debug("Could not reset device", DebugLevel::Error);
+            }
+
+            if cfg!(target_os = "linux") {
+                if self.kernel_drivers.is_empty() {
+                    self.debug("No kernel drivers to detach", DebugLevel::Info);
+                }
+                for &i in self.kernel_drivers.iter() {
+                    if device_handle.attach_kernel_driver(i).is_ok() {
+                        self.debug(format!("kernel attach:{i:?}"), DebugLevel::Debug);
+                    } else {
+                        self.debug(format!("could not attach kernel driver"), DebugLevel::Debug);
+                    }
+                }
+                if device_handle.reset().is_err() {
+                    self.debug("Could not reset device handle", DebugLevel::Error);
                 }
             }
-            if device_handle.reset().is_err() {
-                eprintln!("Could not reset device handle");
-            }
+        } else {
+            self.debug(
+                "Could not open device handle when closing manager",
+                DebugLevel::Error,
+            );
         }
     }
 }
 
 #[allow(clippy::vec_init_then_push)]
 impl Manager {
-    pub fn new(debug_level: DebugLevel, settings: Settings) -> Self {
+    pub fn new(debug_level: DebugLevel, settings: Settings) -> Result<Self, Box<dyn Error>> {
         let mut vec = vec![];
-        let context = rusb::Context::new().unwrap();
+        let context = rusb::Context::new()?;
 
         let device_handle = context
             .open_device_with_vid_pid(0x1e71, 0x3008)
-            .expect("Could not open kraken");
-        device_handle.reset().unwrap();
+            .ok_or("Could not open kraken")?;
 
-        if debug_level >= DebugLevel::Info {
-            println!("config: {:?}", device_handle.active_configuration());
-        }
+        device_handle.reset()?;
 
-        for i in [0, 1] {
-            let has_k = device_handle.kernel_driver_active(i).unwrap_or_default();
-            if has_k {
-                device_handle.detach_kernel_driver(i).unwrap();
-                vec.push(i);
-                if debug_level >= DebugLevel::Debug {
-                    println!("kernel detach:{i:?}");
+        if cfg!(target_os = "linux") {
+            if debug_level >= DebugLevel::Info {
+                println!("config: {:?}", device_handle.active_configuration());
+            }
+
+            for i in [0, 1] {
+                let has_k = device_handle.kernel_driver_active(i).unwrap_or_default();
+                if has_k {
+                    device_handle.detach_kernel_driver(i)?;
+                    vec.push(i);
+                    if debug_level >= DebugLevel::Debug {
+                        println!("kernel detach:{i:?}");
+                    }
+                } else {
+                    if debug_level >= DebugLevel::Debug {
+                        println!("kernel driver not active:{i:?}");
+                    }
                 }
             }
         }
-        Manager {
+        Ok(Manager {
             image_index: None,
             debug_level,
             settings,
             kernel_drivers: vec,
-        }
+        })
     }
-    fn debug(&self, string: String, level: DebugLevel) {
+
+    //write details to stdout if debugging enabled
+    //if error, always write
+    fn debug(&self, string: impl ToString, level: DebugLevel) {
         if self.debug_level >= level {
-            println!("{}", string);
+            println!("{}", string.to_string());
+        }
+        if level == DebugLevel::Error {
+            eprintln!("{}", string.to_string());
         }
     }
 
@@ -342,31 +369,37 @@ Firmware {}.{}.{}",
 
     fn write_to_interrupt(&mut self, device_handle: &DeviceHandle<Context>, bytes: Vec<u8>) {
         if device_handle.claim_interface(1).is_err() {
-            eprintln!("Could not claim interrupt interface");
+            self.debug("Could not claim interrupt interface", DebugLevel::Error);
             return;
         }
         let result = device_handle.write_interrupt(1, &bytes, Duration::from_millis(200));
         if let Err(err) = result {
-            eprintln!("Error writing to interface {err}");
+            self.debug(
+                format!("Error writing to interface {err}"),
+                DebugLevel::Error,
+            );
             return;
         }
         if device_handle.release_interface(1).is_err() {
-            eprint!("Could not release interface");
+            self.debug("Could not release interface", DebugLevel::Error);
         }
     }
 
     fn write_to_bulk(&mut self, device_handle: &DeviceHandle<Context>, bytes: &[u8]) {
         if let Err(err) = device_handle.claim_interface(0) {
-            eprintln!("Could not claim bulk interface {}", err);
+            self.debug(
+                format!("Could not claim bulk interface {}", err),
+                DebugLevel::Error,
+            );
         } else {
             if device_handle
                 .write_bulk(2, bytes, Duration::from_millis(200))
                 .is_err()
             {
-                eprintln!("Could not write to bulk");
+                self.debug("Could not write to bulk", DebugLevel::Error);
             }
             if device_handle.release_interface(0).is_err() {
-                eprintln!("Could not release interface");
+                self.debug("Could not release interface", DebugLevel::Error);
             }
         }
     }
@@ -407,13 +440,19 @@ Firmware {}.{}.{}",
 
         let res = device_handle.write_interrupt(1, input, Duration::from_millis(200));
         if let Err(e) = res {
-            println!("error writing to kraken {:?}", e);
+            self.debug(
+                format!("error writing to kraken {:?}", e),
+                DebugLevel::Error,
+            );
         }
         std::thread::sleep(Duration::from_millis(200));
         let mut buf = [0u8; 64];
         let res = device_handle.read_interrupt(129, &mut buf, Duration::from_millis(500));
         if let Err(e) = res {
-            println!("error reading from kraken {:?}", e);
+            self.debug(
+                format!("error reading from kraken {:?}", e),
+                DebugLevel::Error,
+            );
         }
         let bytes = buf.into_iter().collect::<Vec<u8>>();
 
@@ -426,19 +465,76 @@ Firmware {}.{}.{}",
     }
 
     pub(crate) fn reload_settings(&mut self) {
-        if let Some(time) = Settings::modified_time() {
-            if time > self.settings.loaded {
-                if self.debug_level >= DebugLevel::Info {
-                    let ftime: DateTime<Utc> = time.into();
-                    let stimea: DateTime<Utc> = self.settings.loaded.into();
-                    println!(
-                        "Reloading settings as file time {}> loaded time{}",
-                        ftime.format("%Y-%m-%d %H:%M:%S"),
-                        stimea.format("%Y-%m-%d %H:%M:%S")
+        let temp: DateTime<Local> = self.settings.loaded.into();
+        self.debug(
+            format!(
+                "Checking reload loaded time '{}'",
+                temp.format("%Y-%m-%d %H:%M:%S"),
+            ),
+            DebugLevel::Info,
+        );
+        //if settings file changed, reload
+        match Settings::get_file() {
+            Ok(file) => {
+                self.debug(
+                    format!(
+                        "Checking if path is same {:?} {:?}",
+                        file, self.settings.path
+                    ),
+                    DebugLevel::Info,
+                );
+                if Some(file) != self.settings.path {
+                    self.debug(
+                        format!("Reloading settings as file changed"),
+                        DebugLevel::Info,
                     );
+                    if let Ok(settings) = Settings::load() {
+                        self.settings = settings;
+                        return;
+                    }
                 }
-                self.settings = Settings::load().unwrap();
             }
+            Err(e) => self.debug(format!("Could not get file {:?}", e), DebugLevel::Error),
+        }
+
+        //if file time changed, reload
+        match Settings::modified_time() {
+            Ok(time) => {
+                let temp2: DateTime<Local> = time.into();
+                self.debug(
+                    format!(
+                        "Checking reload  file time {}",
+                        temp2.format("%Y-%m-%d %H:%M:%S")
+                    ),
+                    DebugLevel::Info,
+                );
+                if time > self.settings.loaded {
+                    if self.debug_level >= DebugLevel::Info {
+                        let ftime: DateTime<Utc> = time.into();
+                        let stimea: DateTime<Utc> = self.settings.loaded.into();
+                        self.debug(
+                            format!(
+                                "Reloading settings as file time {}> loaded time{}",
+                                ftime.format("%Y-%m-%d %H:%M:%S"),
+                                stimea.format("%Y-%m-%d %H:%M:%S")
+                            ),
+                            DebugLevel::Info,
+                        );
+                    }
+                    self.debug(
+                        format!("Reloading settings as file time changed"),
+                        DebugLevel::Info,
+                    );
+                    if let Ok(settings) = Settings::load() {
+                        self.settings = settings;
+                        return;
+                    }
+                }
+            }
+            Err(e) => self.debug(
+                format!("Could not get modified time of settings file {:?}", e),
+                DebugLevel::Error,
+            ),
         }
     }
 }

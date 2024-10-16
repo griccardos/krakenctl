@@ -9,7 +9,7 @@ mod settings;
 use clap::Parser;
 use managerrusb::{DebugLevel, Manager};
 use settings::Settings;
-#[cfg(target_os = "unix")]
+#[cfg(target_os = "linux")]
 use signal_hook::consts::{SIGHUP, SIGTSTP};
 use signal_hook::consts::{SIGINT, SIGTERM};
 use std::{
@@ -80,8 +80,6 @@ struct Cli {
 fn main() {
     let start = Instant::now();
 
-    //setup forced exit scenarios
-
     let clapp = Cli::parse();
 
     let debug_level = clapp.debug.into();
@@ -101,7 +99,13 @@ fn main() {
         println!("{settings:?}");
     }
 
-    let mut manager = Manager::new(debug_level, settings);
+    let mut manager = match Manager::new(debug_level, settings) {
+        Ok(m) => m,
+        Err(e) => {
+            println!("Could not create manager, {e}");
+            std::process::exit(1);
+        }
+    };
 
     if clapp.liquid {
         manager.set_liquid();
@@ -129,10 +133,7 @@ fn main() {
             clapp.repeat.clone(),
         );
     } else if let Some(input) = clapp.values {
-        maybe_repeat(
-            move || manager.set_values_from_input(&input, time),
-            clapp.repeat.clone(),
-        );
+        manager.set_values_from_input(&input, time)
     } else if let Some(path) = clapp.script {
         if debug_level >= DebugLevel::Info {
             println!("running script '{path}'");
@@ -151,7 +152,7 @@ fn main() {
                     output.status,
                 );
                 if debug_level >= DebugLevel::Info {
-                    println!("out:{stdo} err:{stde} status:{status:?}")
+                    println!("out:'{stdo}' err:'{stde}' status:{status:?}")
                 }
 
                 manager.set_values_from_input(&stdo, time);
@@ -171,11 +172,10 @@ fn main() {
 }
 
 fn maybe_repeat<F: FnMut()>(mut func: F, rep: Option<u64>) {
-    let term = Arc::new(AtomicUsize::new(0));
-
+    let term: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
     signal_hook::flag::register_usize(SIGTERM, Arc::clone(&term), SIGTERM as usize).unwrap();
     signal_hook::flag::register_usize(SIGINT, Arc::clone(&term), SIGINT as usize).unwrap();
-    #[cfg(target_os = "unix")]
+    #[cfg(target_os = "linux")]
     {
         signal_hook::flag::register_usize(SIGTSTP, Arc::clone(&term), SIGTSTP as usize).unwrap();
         signal_hook::flag::register_usize(SIGHUP, Arc::clone(&term), SIGHUP as usize).unwrap();
@@ -194,7 +194,9 @@ fn maybe_repeat<F: FnMut()>(mut func: F, rep: Option<u64>) {
             0 => (),
             signal => {
                 eprintln!("Got signal to exit with code {signal}");
-                Manager::new(DebugLevel::None, Settings::default()).set_liquid();
+                if let Ok(mut man) = Manager::new(DebugLevel::None, Settings::default()) {
+                    man.set_liquid();
+                }
                 break;
             }
         }

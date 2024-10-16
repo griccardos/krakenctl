@@ -1,7 +1,9 @@
 use image::Rgba;
 use std::{
+    error::Error,
     fs::File,
     io::{BufReader, Read},
+    path::PathBuf,
     time::SystemTime,
 };
 
@@ -16,6 +18,7 @@ pub struct Settings {
     pub right_title: Rgba<u8>,
     pub show_time: bool,
     pub loaded: SystemTime,
+    pub path: Option<PathBuf>,
 }
 
 impl Default for Settings {
@@ -30,11 +33,12 @@ impl Default for Settings {
             right_title: Rgba([120, 120, 255, 255]),
             show_time: false,
             loaded: SystemTime::UNIX_EPOCH,
+            path: None,
         }
     }
 }
 impl Settings {
-    pub fn get_file() -> Result<File, String> {
+    pub fn get_file() -> Result<PathBuf, String> {
         let path = dirs::config_dir();
         if path.is_none() {
             return Err("No config dir".to_string()); //no config dir
@@ -45,16 +49,16 @@ impl Settings {
         if !path.exists() {
             return Err(format!("No config file at {path:?}")); //no config file
         }
-        let file = File::open(&path);
-        if file.is_err() {
-            return Err(format!("Could not open file {path:?}")); //no read permission
-        }
-        Ok(file.unwrap())
+        Ok(path)
     }
     pub fn load() -> Result<Self, String> {
-        let file = Settings::get_file()?;
+        let path = Settings::get_file()?;
+        let file = File::open(&path);
+        let Ok(file) = file else {
+            return Err(format!("Could not open file {path:?}")); //no read permission
+        };
 
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::new(&file);
         let mut buffer = String::new();
 
         let _ = reader.read_to_string(&mut buffer);
@@ -69,6 +73,7 @@ impl Settings {
 
         let mut settings = Settings {
             loaded: SystemTime::now(),
+            path: Some(path),
             ..Default::default()
         };
 
@@ -88,20 +93,10 @@ impl Settings {
         }
         Ok(settings)
     }
-    fn path() -> std::path::PathBuf {
-        let path = dirs::config_dir();
-        if path.is_none() {
-            return std::path::PathBuf::new(); //no config dir
-        }
-        let mut path = path.unwrap();
-        path.push("krakenctl");
-        path.push("config.ini");
-        path
-    }
 
-    pub(crate) fn modified_time() -> Option<SystemTime> {
-        let file = Settings::get_file().ok()?;
-        file.metadata().ok()?.modified().ok()
+    pub(crate) fn modified_time() -> Result<SystemTime, Box<dyn Error>> {
+        let file = Settings::get_file()?;
+        Ok(file.metadata()?.modified()?)
     }
 }
 
