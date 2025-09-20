@@ -21,7 +21,10 @@ Or install rustup, and clone this repo, and run `cargo build --release` to build
 You need to run as root, or you need to give your user permissions to access the USB device.
 To do this, you can create a udev rule in `/etc/udev/rules.d/99-kraken.rules` and insert the following line:
 
-`SUBSYSTEM=="usb", ATTRS{idVendor}=="1e71", ATTRS{idProduct}=="3008", GROUP="plugdev", TAG+="uaccess"`
+`SUBSYSTEM=="usb", ATTRS{idVendor}=="1e71", ATTRS{idProduct}=="3008", GROUP="plugdev", MODE="0660"`
+
+Add your user to the plugdev group if not already in it:
+`sudo usermod -aG plugdev $USER`
 
 Then run `reboot`
 

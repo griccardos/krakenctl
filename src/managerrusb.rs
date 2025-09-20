@@ -121,10 +121,19 @@ impl Manager {
     pub fn new(debug_level: DebugLevel, settings: Settings) -> Result<Self, Box<dyn Error>> {
         let mut vec = vec![];
         let context = rusb::Context::new()?;
-
         let device_handle = context
-            .open_device_with_vid_pid(0x1e71, 0x3008)
-            .ok_or("Could not open kraken")?;
+            .devices()
+            .unwrap()
+            .iter()
+            .filter(|device| {
+                let device_desc = device
+                    .device_descriptor()
+                    .expect("Could not read device descriptor");
+                device_desc.vendor_id() == 0x1e71 && device_desc.product_id() == 0x3008
+            })
+            .next()
+            .ok_or("Could not find or open kraken")?
+            .open()?;
 
         device_handle.reset()?;
 
@@ -213,7 +222,7 @@ impl Manager {
                     self.write_to_interrupt(&device_handle, buff![0x30,4,i;64]);
                 }
 
-                let rand_index: usize = rand::random::<usize>() % 16;
+                let rand_index: usize = rand::random::<u64>() as usize % 16;
                 self.image_index = Some(rand_index);
             }
 
